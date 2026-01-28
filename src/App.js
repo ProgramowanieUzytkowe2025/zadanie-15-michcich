@@ -1,28 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-// --- Komponent Wizualizacji ---
 const VisualizationComponent = ({ cities, solution, showSolution }) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    // Rysuj tylko, gdy mamy miasta
     if (!cities || !cities.length) {
-      // Jeśli canvas istnieje, wyczyść go
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext('2d');
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       }
       return;
     }
-
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    
-    // Wyczyść canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Znajdź min i max dla skalowania
     const xs = cities.map(c => c.x);
     const ys = cities.map(c => c.y);
     const minX = Math.min(...xs);
@@ -48,7 +41,6 @@ const VisualizationComponent = ({ cities, solution, showSolution }) => {
       y: canvas.height - (offsetY + (y - minY) * scale) 
     });
 
-    // Rysuj połączenia (rozwiązanie)
     if (showSolution.value && solution && solution.length > 0) {
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 1.5;
@@ -69,7 +61,6 @@ const VisualizationComponent = ({ cities, solution, showSolution }) => {
       ctx.stroke();
     }
 
-    // Rysuj miasta (punkty)
     cities.forEach((city, idx) => {
       const p = transform(city.x, city.y);
       ctx.fillStyle = '#ef4444';
@@ -100,7 +91,6 @@ const VisualizationComponent = ({ cities, solution, showSolution }) => {
   );
 };
 
-// --- Komponent Rozwiązania ---
 const SolutionComponent = ({ solution, distance }) => {
   return (
     <div style={{ border: '1px solid #ccc', padding: '20px', marginBottom: '20px', borderRadius: '8px' }}>
@@ -127,7 +117,6 @@ const SolutionComponent = ({ solution, distance }) => {
   );
 };
 
-// --- Komponent Kontroli ---
 const AlgorithmControl = ({ onStart, onStop, isRunning, iterations, hasData }) => {
   return (
     <div style={{ border: '1px solid #ccc', padding: '20px', marginBottom: '20px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
@@ -151,7 +140,6 @@ const AlgorithmControl = ({ onStart, onStop, isRunning, iterations, hasData }) =
   );
 };
 
-// --- Komponent Wykresu ---
 const ChartComponent = ({ data }) => {
   return (
     <div style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px' }}>
@@ -160,18 +148,32 @@ const ChartComponent = ({ data }) => {
         <ResponsiveContainer>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="iteration" label={{ value: 'Iteracja', position: 'insideBottomRight', offset: -5 }} />
-            <YAxis label={{ value: 'Długość trasy', angle: -90, position: 'insideLeft' }} domain={['auto', 'auto']} />
+            <XAxis 
+              dataKey="iteration" 
+              type="number"               
+              allowDecimals={false}       
+              domain={['dataMin', 'dataMax']} 
+              label={{ value: 'Iteracja', position: 'insideBottomRight', offset: -5 }} 
+            />
+            <YAxis 
+              label={{ value: 'Długość trasy', angle: -90, position: 'insideLeft' }} 
+              domain={['auto', 'auto']} 
+            />
             <Tooltip />
-            <Line type="monotone" dataKey="distance" stroke="#3b82f6" dot={false} strokeWidth={2} />
+            <Line 
+              type="monotone" 
+              dataKey="distance" 
+              stroke="#3b82f6" 
+              dot={false}       
+              strokeWidth={2} 
+              isAnimationActive={false} 
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
     </div>
   );
 };
-
-// --- Główny Komponent App ---
 const App = () => {
   const [cities, setCities] = useState([]);
   const [solution, setSolution] = useState([]);
@@ -182,8 +184,6 @@ const App = () => {
   const [showSolution, setShowSolution] = useState(false);
   
   const intervalRef = useRef(null);
-
-  // Refy dla algorytmu (rozwiązują problem "stale closures")
   const citiesRef = useRef([]);
   const solutionRef = useRef([]);
   const bestDistanceRef = useRef(Infinity);
@@ -209,7 +209,6 @@ const App = () => {
     return total;
   };
 
-  // --- Funkcja obsługi wczytywania pliku (WYMAGANIE NR 1) ---
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -218,15 +217,12 @@ const App = () => {
     reader.onload = (e) => {
       const text = e.target.result;
       
-      // Parsowanie danych
       const lines = text.trim().split('\n');
       const parsedCities = lines
         .map(line => line.trim())
         .filter(line => line.length > 0)
         .map(line => {
-          // Obsługa różnych separatorów (spacja lub tabulacja)
           const parts = line.split(/\s+/);
-          // Oczekujemy formatu: ID X Y
           if (parts.length < 3) return null;
           return {
             id: parseInt(parts[0]),
@@ -239,7 +235,6 @@ const App = () => {
       if (parsedCities.length > 0) {
         setCities(parsedCities);
         
-        // Generuj początkowe losowe rozwiązanie
         const initialSolution = parsedCities.map((_, idx) => idx);
         for (let i = initialSolution.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -248,12 +243,11 @@ const App = () => {
 
         const initialDistance = calculateTotalDistance(initialSolution, parsedCities);
         
-        // Resetowanie stanu
         setSolution(initialSolution);
         setBestDistance(initialDistance);
         setIterations(0);
         setChartData([{ iteration: 0, distance: initialDistance }]);
-        stopAlgorithm(); // Zatrzymaj algorytm jeśli działał
+        stopAlgorithm(); 
       } else {
         alert("Błąd: Nie udało się odczytać miast z pliku. Sprawdź format.");
       }
@@ -261,7 +255,6 @@ const App = () => {
     reader.readAsText(file);
   };
 
-  // --- Algorytm Monte Carlo ---
   const runIteration = () => {
     const currentCities = citiesRef.current;
     const currentBestSolution = solutionRef.current;
@@ -270,7 +263,6 @@ const App = () => {
     if (currentCities.length === 0) return;
 
     const newCandidate = [...currentBestSolution];
-    // Zamiana dwóch losowych miast
     const i = Math.floor(Math.random() * newCandidate.length);
     const j = Math.floor(Math.random() * newCandidate.length);
     [newCandidate[i], newCandidate[j]] = [newCandidate[j], newCandidate[i]];
@@ -279,10 +271,12 @@ const App = () => {
 
     setIterations(prev => {
         const nextIter = prev + 1;
+
+        setChartData(prevData => [...prevData, { iteration: nextIter, distance: newDistance }]);
+
         if (newDistance < currentBestDistance) {
             setSolution(newCandidate);
             setBestDistance(newDistance);
-            setChartData(prevData => [...prevData, { iteration: nextIter, distance: newDistance }]);
         }
         return nextIter;
     });
@@ -291,7 +285,6 @@ const App = () => {
   const startAlgorithm = () => {
     if (intervalRef.current) return;
     setIsRunning(true);
-    // Ustawienie na 5 sekund zgodnie z wymaganiem pkt 4
     intervalRef.current = setInterval(runIteration, 5000); 
   };
 
@@ -303,7 +296,6 @@ const App = () => {
     setIsRunning(false);
   };
 
-  // Cleanup
   useEffect(() => {
     return () => stopAlgorithm();
   }, []);
@@ -312,7 +304,6 @@ const App = () => {
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ textAlign: 'center' }}>Problem Komiwojażera - TSP</h1>
       
-      {/* SEKCJA WCZYTYWANIA PLIKU */}
       <div style={{ background: '#e0f2fe', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
         <h3>1. Wczytaj dane</h3>
         <p style={{fontSize: '14px', margin: '5px 0'}}>Wybierz plik tekstowy (np. berlin52.txt) zawierający dane w formacie: <code>ID X Y</code></p>
